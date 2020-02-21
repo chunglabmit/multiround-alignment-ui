@@ -1,0 +1,22 @@
+name: multiround-alignment-ui
+channels:
+ - anaconda
+ - conda-forge
+dependencies:
+ - python
+ - pyqt
+ - numpy
+ - scipy
+ - scikit-image
+ - matplotlib
+ - tornado=4.5.3
+ - gunicorn pytorch
+ - tifffile
+ - vispy
+ - pip:
+   - https://github.com/chunglabmit/mp_shared_memory/archive/master.zip#egg=mp_shared_memory
+   - https://github.com/chunglabmit/blockfs/archive/master.zip#egg=blockfs
+   - https://github.com/chunglabmit/eflash_2018/archive/master.zip#egg=eflash-2018
+   - https://github.com/chunglabmit/nuggt/archive/master.zip#egg=nuggt
+   - https://github.com/chunglabmit/precomputed-tif/archive/master.zip#egg=precomputed-tif
+   - git+ssh://git@github.com/chunglabmit/phathom.git#egg=phathom

@@ -14,14 +14,18 @@ setup(
     "User interface for Phathom's registration pipeline",
     long_description=long_description,
     install_requires=[
-        "phathom",
+        "eflash-2018",
+        "gunicorn",
         "neuroglancer",
-        "precomputed-tif"
+        "nuggt",
+        "phathom",
+        "precomputed-tif",
+        "vispy"
     ],
     author="Kwanghun Chung Lab",
     packages=["multiround_alignment_ui"],
     entry_points={ 'console_scripts': [
-        "multiround-alignment-ui=multiround_alignment_ui:main"
+        "multiround-alignment-ui=multiround_alignment_ui.main:main"
     ]},
     url="https://github.com/chunglabmit/multiround-alignment-ui",
     license="MIT",

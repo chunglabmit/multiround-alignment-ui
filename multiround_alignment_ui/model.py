@@ -37,7 +37,9 @@ class Variable:
     def unregister_callback(self, name):
         del self.__callbacks[name]
 
-    def bind_line_edit(self, widget:QLineEdit):
+    def bind_line_edit(self, widget:QLineEdit, name=None):
+        if name is None:
+            name = uuid.uuid4()
         def on_change(*args):
             self.set(widget.text())
 
@@ -45,9 +47,11 @@ class Variable:
             widget.setText(self.get())
         on_callback()
         widget.editingFinished.connect(on_change)
-        self.register_callback(uuid.uuid4(), on_callback)
+        self.register_callback(name, on_callback)
 
-    def bind_spin_box(self, widget:QSpinBox):
+    def bind_spin_box(self, widget:QSpinBox, name=None):
+        if name is None:
+            name  = uuid.uuid4()
         def on_change(*args):
             self.set(widget.value())
 
@@ -61,7 +65,7 @@ class Variable:
             widget.setValue(value)
         on_callback()
         widget.editingFinished.connect(on_change)
-        self.register_callback(uuid.uuid4(), on_callback)
+        self.register_callback(name, on_callback)
 
     def bind_double_spin_box(self, widget: QDoubleSpinBox, name=None):
         def on_change(*args):
@@ -190,6 +194,16 @@ class Model:
         self.__fit_nonrigid_transform_pdf_path = [
             Variable("") for _ in range(5)]
         #
+        # Apply alignment
+        #
+        self.__n_alignment_channels = Variable(1)
+        self.__n_levels = Variable(7)
+        self.__alignment_input_paths = [Variable("")]
+        self.__alignment_output_paths = [Variable("")]
+        self.__alignment_tiff_directories = [Variable("")]
+        self.__alignment_input_coords = Variable("")
+        self.__alignment_output_coords = Variable("")
+        #
         # The dictionary
         #
         self.__serialization_dictionary = dict(
@@ -250,7 +264,16 @@ class Model:
             filter_matches_min_coherence=self.filter_matches_min_coherence,
             fit_nonrigid_transform_path=self.fit_nonrigid_transform_path,
             fit_nonrigid_transform_inverse_path=
-            self.fit_nonrigid_transform_inverse_path
+            self.fit_nonrigid_transform_inverse_path,
+            fit_nonrigid_transform_pdf_path=
+            self.fit_nonrigid_transform_pdf_path,
+            n_alignment_channels=self.n_alignment_channels,
+            n_levels=self.n_levels,
+            alignment_input_paths=self.alignment_input_paths,
+            alignment_output_paths=self.alignment_output_paths,
+            alignment_tiff_directories=self.alignment_tiff_directories,
+            alignment_input_coords=self.alignment_input_coords,
+            alignment_output_coords=self.alignment_output_coords
         )
 
     def read(self, path):
@@ -263,7 +286,7 @@ class Model:
                     target.set(d[key])
                 elif isinstance(target, list):
                     for i, value in enumerate(d[key]):
-                        if len(target) < i:
+                        if len(target) > i:
                             target[i].set(value)
                         else:
                             target.append(Variable(value))
@@ -525,3 +548,31 @@ class Model:
     @property
     def fit_nonrigid_transform_pdf_path(self) -> typing.List[Variable]:
         return self.__fit_nonrigid_transform_pdf_path
+
+    @property
+    def n_alignment_channels(self) ->Variable:
+        return self.__n_alignment_channels
+
+    @property
+    def n_levels(self) -> Variable:
+        return self.__n_levels
+
+    @property
+    def alignment_input_paths(self) -> typing.List[Variable]:
+        return self.__alignment_input_paths
+
+    @property
+    def alignment_output_paths(self) -> typing.List[Variable]:
+        return self.__alignment_output_paths
+
+    @property
+    def alignment_tiff_directories(self) -> typing.List[Variable]:
+        return self.__alignment_tiff_directories
+
+    @property
+    def alignment_input_coords(self) -> Variable:
+        return self.__alignment_input_coords
+
+    @property
+    def alignment_output_coords(self) -> Variable:
+        return self.__alignment_output_coords

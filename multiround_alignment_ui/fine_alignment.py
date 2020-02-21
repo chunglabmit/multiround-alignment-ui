@@ -2,15 +2,18 @@ import os
 
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QGroupBox, QHBoxLayout, \
     QPushButton, QLabel, QSpinBox, QDoubleSpinBox
-
+from PyQt5.QtGui import QDesktopServices
+from PyQt5.QtCore import QUrl
 from phathom.pipeline.geometric_features_cmd import main as geometric_features
 from phathom.pipeline.find_neighbors_cmd import main as find_neighbors
 from phathom.pipeline.filter_matches_cmd import main as filter_matches
 from phathom.pipeline.fit_nonrigid_transform_cmd \
     import main as fit_nonrigid_transform
 from .model import Model, Variable
+import pathlib
 
-from .utils import OnActivateMixin, tqdm_progress
+from .utils import OnActivateMixin, tqdm_progress, fixed_neuroglancer_url, \
+    moving_neuroglancer_url
 
 
 def voxel_size(model:Model) -> str:
@@ -149,7 +152,13 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
         self.find_neighbors_button = QPushButton("Run find-neighbors")
         self.find_neighbors_button.clicked.connect(
             self.on_find_neighbors)
-        glayout.addWidget(self.find_neighbors_button)
+        hlayout = QHBoxLayout()
+        glayout.addLayout(hlayout)
+        hlayout.addWidget(self.find_neighbors_button)
+        self.show_find_neighbors_pdf_button = QPushButton("Show results")
+        hlayout.addWidget(self.show_find_neighbors_pdf_button)
+        self.show_find_neighbors_pdf_button.clicked.connect(
+            self.on_show_find_neighbors_results)
         #
         ############################
         #
@@ -160,11 +169,13 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
         glayout = QVBoxLayout()
         group_box.setLayout(glayout)
         hlayout = QHBoxLayout()
+        glayout.addLayout(hlayout)
         hlayout.addWidget(QLabel("Maximum distance (μm):"))
         self.maximum_distance_widget = QDoubleSpinBox()
         self.maximum_distance_widget.setMinimum(10.0)
         self.maximum_distance_widget.setMaximum(1000.0)
         hlayout.addWidget(self.maximum_distance_widget)
+        glayout.addLayout(hlayout)
 
         def on_maximum_distance_changed(value):
             self.model.filter_matches_max_distance[self.current_round_idx]\
@@ -175,6 +186,7 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
         hlayout.addStretch(1)
 
         hlayout = QHBoxLayout()
+        glayout.addLayout(hlayout)
         hlayout.addWidget(QLabel("Minimum coherence:"))
         self.minimum_coherence_widget = QDoubleSpinBox()
         self.minimum_coherence_widget.setMinimum(.01)
@@ -188,9 +200,15 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
         self.minimum_coherence_widget.valueChanged.connect(
             on_minimum_coherence_changed)
         hlayout.addStretch(1)
+        hlayout = QHBoxLayout()
+        glayout.addLayout(hlayout)
         self.filter_matches_button = QPushButton("Filter matches")
-        glayout.addWidget(self.filter_matches_button)
+        hlayout.addWidget(self.filter_matches_button)
         self.filter_matches_button.clicked.connect(self.on_filter_matches)
+        self.show_filter_matches_pdf_button = QPushButton("Show results")
+        hlayout.addWidget(self.show_filter_matches_pdf_button)
+        self.show_filter_matches_pdf_button.clicked.connect(
+            self.on_show_filter_matches_results)
         #
         ##############################################
         #
@@ -201,9 +219,16 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
         glayout = QVBoxLayout()
         group_box.setLayout(glayout)
         self.fit_nonrigid_transform_button = QPushButton()
-        glayout.addWidget(self.fit_nonrigid_transform_button)
+        hlayout = QHBoxLayout()
+        glayout.addLayout(hlayout)
+        hlayout.addWidget(self.fit_nonrigid_transform_button)
         self.fit_nonrigid_transform_button.clicked.connect(
             self.on_fit_nonrigid_transform)
+        self.show_fit_nonrigid_transform_pdf_button = QPushButton(
+            "Show results")
+        hlayout.addWidget(self.show_fit_nonrigid_transform_pdf_button)
+        self.show_fit_nonrigid_transform_pdf_button.clicked.connect(
+            self.on_show_fit_nonrigid_transform_results)
 
         layout.addStretch(1)
         self.on_current_round_changed()
@@ -214,7 +239,7 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
     def update_controls(self):
         idx = self.current_round_idx
         transform_path = self.model.rough_interpolator.get() if idx == 0 \
-            else self.model.fit_nonrigid_transform_inverse_path[idx-1]
+            else self.model.fit_nonrigid_transform_inverse_path[idx-1].get()
         for src_paths, dest_paths, widget, name, re_name in (
                 (
                     [self.model.fixed_coords_path.get()],
@@ -268,7 +293,7 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
                         self.model.filter_matches_pdf_path[idx].get()
                     ],
                     self.filter_matches_button,
-                    "Filter matches (round %d)" % (idx+1),
+                    "Run filter matches (round %d)" % (idx+1),
                     "Rerun filter matches (round %d)" % (idx+1)
                 ),
                 (
@@ -290,10 +315,22 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
                 widget.setText(name)
             else:
                 widget.setDisabled(False)
-                if any([os.path.exists(_) for _ in dest_paths]):
+                if all([os.path.exists(_) for _ in dest_paths]):
                     widget.setText(re_name)
                 else:
                     widget.setText(name)
+        for button, path in (
+                ( self.show_find_neighbors_pdf_button,
+                  self.model.find_neighbors_pdf_path[idx].get()),
+                ( self.show_filter_matches_pdf_button,
+                  self.model.filter_matches_pdf_path[idx].get()),
+                ( self.show_fit_nonrigid_transform_pdf_button,
+                  self.model.fit_nonrigid_transform_pdf_path[idx].get())
+        ):
+            if os.path.exists(path):
+                button.setDisabled(False)
+            else:
+                button.setDisabled(True)
 
     def on_fixed_geometric_features(self, *args):
         with tqdm_progress() as result:
@@ -327,8 +364,8 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
 
     def on_find_neighbors(self, *args):
         idx = self.current_round_idx
-        interpolator_variable = self.rough_interpolator if idx == 0 \
-            else self.model.fit_nonrigid_transform_inverse_path
+        interpolator_variable = self.model.rough_interpolator if idx == 0 \
+            else self.model.fit_nonrigid_transform_inverse_path[idx-1]
         with tqdm_progress():
             find_neighbors([str(_) for _ in (
                 "--fixed-coords", self.model.fixed_coords_path.get(),
@@ -338,10 +375,10 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
                 "--moving-features",
                 self.model.moving_geometric_features_path.get(),
                 "--non-rigid-transformation",
-                self.model.interpolator_variable.get(),
+                interpolator_variable.get(),
                 "--output", self.model.find_neighbors_path[idx].get(),
                 "--visualization-file",
-                self.model.find_neighbors_pdf_path.get(),
+                self.model.find_neighbors_pdf_path[idx].get(),
                 "--voxel-size", voxel_size(self.model),
                 "--radius", self.model.find_neighbors_radius[idx].get(),
                 "--max-fdist",
@@ -351,6 +388,12 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
                 "--n-workers", self.model.n_workers.get())
             ])
         self.update_controls()
+
+    def on_show_find_neighbors_results(self):
+        idx = self.current_round_idx
+        path = self.model.find_neighbors_pdf_path[idx].get()
+        url = pathlib.Path(path).as_uri()
+        QDesktopServices.openUrl(QUrl(url))
 
     def on_filter_matches(self):
         idx = self.current_round_idx
@@ -365,18 +408,35 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
                 "--visualization-file",
                 self.model.filter_matches_pdf_path[idx].get()
             ])
+        self.update_controls()
+
+    def on_show_filter_matches_results(self):
+        idx = self.current_round_idx
+        path = self.model.filter_matches_pdf_path[idx].get()
+        url = pathlib.Path(path).as_uri()
+        QDesktopServices.openUrl(QUrl(url))
 
     def on_fit_nonrigid_transform(self):
         idx = self.current_round_idx
         with tqdm_progress():
             fit_nonrigid_transform([
                 "--input", self.model.filter_matches_path[idx].get(),
-                "--output", self.model.fit_nonrigid_transform_path.get(),
+                "--output", self.model.fit_nonrigid_transform_path[idx].get(),
+                "--fixed-url", fixed_neuroglancer_url(self.model),
+                "--moving-url", moving_neuroglancer_url(self.model),
                 "--inverse",
-                self.model.fit_nonrigid_transform_inverse_path.get(),
-                "--visualization-file", self.model.filter_matches_pdf_path.get()
+                self.model.fit_nonrigid_transform_inverse_path[idx].get(),
+                "--visualization-file",
+                self.model.fit_nonrigid_transform_pdf_path[idx].get()
             ])
+        self.update_controls()
 
+    def on_show_fit_nonrigid_transform_results(self):
+        idx = self.current_round_idx
+        path = self.model.fit_nonrigid_transform_pdf_path[idx].get()
+        url = pathlib.Path(path).as_uri()
+        QDesktopServices.openUrl(QUrl(url))
+        
     def on_refinement_rounds_changed(self, n_rounds):
         #
         # Extend the numeric variables
@@ -439,6 +499,7 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
             variable.register_callback("fine-alignment", on_change)
         self.last_round_idx = self.current_round_idx
         self.variables_have_been_hooked_to_widgets = True
+        self.update_controls()
 
     def on_output_path_changed(self, *args):
         self.model.fixed_geometric_features_path.set(
@@ -463,5 +524,18 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
                 self.model.output_path.get(),
                 "filter-matches_round_%d.pdf" % (idx+1)
             ))
+            self.model.fit_nonrigid_transform_path[idx].set(
+                os.path.join(
+                    self.model.output_path.get(),
+                    "fit-nonrigid-transform_round_%d.pkl" % (idx+1)))
+            self.model.fit_nonrigid_transform_inverse_path[idx].set(
+                os.path.join(
+                    self.model.output_path.get(),
+                    "fit-nonrigid-transform-inverse_round_%d.pkl" % (idx+1)))
+            self.model.fit_nonrigid_transform_pdf_path[idx].set(
+                os.path.join(
+                    self.model.output_path.get(),
+                    "fit-nonrigid-transform_round_%d.pdf" % (idx+1)))
+
 
 

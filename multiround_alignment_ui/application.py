@@ -22,13 +22,15 @@ from .fine_alignment import FineAlignmentWidget
 from .preprocessing import PreprocessingWidget
 from .rigid_alignment import RigidAlignmentWidget
 from .rough_alignment import RoughAlignmentWidget
+from .apply_alignment import ApplyAlignmentWidget
 from .utils import setup_tqdm_progress, OnActivateMixin
 
+
 class ApplicationWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, model):
         super(ApplicationWindow, self).__init__()
         self.setGeometry(0, 0, 1024, 768)
-        self.model = Model()
+        self.model = model
         #
         # Menus
         #
@@ -58,7 +60,8 @@ class ApplicationWindow(QMainWindow):
                 ("Rigid alignment", RigidAlignmentWidget),
                 ("Rough alignment", RoughAlignmentWidget),
                 ("Cell detection", CellDetectionWidget),
-                ("Fine alignment", FineAlignmentWidget)
+                ("Fine alignment", FineAlignmentWidget),
+                ("Apply alignment", ApplyAlignmentWidget)
         ):
             tab_widget = widget_class(self.model)
             self.tabs.addTab(tab_widget, name)
@@ -120,9 +123,12 @@ class ApplicationWindow(QMainWindow):
         self.close()
 
 
-def run_application():
+def run_application(session_file):
     app = QApplication(sys.argv)
-    window = ApplicationWindow()
+    model = Model()
+    if session_file is not None:
+        model.read(session_file)
+    window = ApplicationWindow(model)
     window.setWindowTitle("Multiround alignment")
     window.show()
     sys.exit(app.exec())

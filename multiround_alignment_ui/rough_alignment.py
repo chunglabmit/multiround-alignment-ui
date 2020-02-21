@@ -66,9 +66,9 @@ class RoughAlignmentWidget(QWidget):
             return
         self.running = True
         initial_rotation = "%f,%f,%f" % (
-            self.model.angle_x.get(),
-            self.model.angle_y.get(),
-            self.model.angle_z.get())
+            -self.model.angle_x.get(),
+            -self.model.angle_y.get(),
+            -self.model.angle_z.get())
         initial_translation = "%f,%f,%f" % (
             self.model.offset_x.get(),
             self.model.offset_y.get(),

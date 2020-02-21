@@ -31,6 +31,7 @@ class QTqdm(tqdm.tqdm):
         super(QTqdm, self).__init__(*args, **kwargs)
         del self.sp
         self.cancelled = False
+        self.mininterval
 
     def cancel(self, *args):
         self.cancelled = True
@@ -70,6 +71,7 @@ class QTqdm(tqdm.tqdm):
                         PROGRESS.setValue(self.n)
                         elapsed = self._time() - self.start_t
                         remaining = (self.total - self.n) * elapsed / self.n
+                        self.last_print_t = cur_t
                         msg = '{0:d}/{1:d} [{2}<{3}]'.format(
                             self.n, self.total, self.format_interval(elapsed),
                             self.format_interval(remaining))

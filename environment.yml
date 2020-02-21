@@ -4,13 +4,15 @@ channels:
  - conda-forge
 dependencies:
  - python
+ - pip
  - pyqt
  - numpy
  - scipy
  - scikit-image
  - matplotlib
  - tornado=4.5.3
- - gunicorn pytorch
+ - gunicorn
+ - pytorch
  - tifffile
  - vispy
  - pip:
@@ -20,3 +22,4 @@ dependencies:
    - https://github.com/chunglabmit/nuggt/archive/master.zip#egg=nuggt
    - https://github.com/chunglabmit/precomputed-tif/archive/master.zip#egg=precomputed-tif
    - git+ssh://git@github.com/chunglabmit/phathom.git#egg=phathom
+   - https://github.com/chunglabmit/multiround-alignment-ui/archive/master.zip#egg=multiround-alignment-ui

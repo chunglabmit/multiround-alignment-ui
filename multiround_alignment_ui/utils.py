@@ -36,7 +36,7 @@ class QTqdm(tqdm.tqdm):
     def cancel(self, *args):
         self.cancelled = True
 
-    def refresh(self):
+    def refresh(self, *args, **kwargs):
         PROGRESS.setValue(self.n)
 
     def __iter__(self):

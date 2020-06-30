@@ -7,7 +7,7 @@ import os
 import tempfile
 
 import typing
-from PyQt5.QtWidgets import QLineEdit, QSpinBox, QDoubleSpinBox, QLabel
+from PyQt5.QtWidgets import QLineEdit, QSpinBox, QDoubleSpinBox, QLabel, QCheckBox
 import uuid
 
 
@@ -90,6 +90,16 @@ class Variable:
         on_change()
         self.register_callback(uuid.uuid4(), on_change)
 
+    def bind_checkbox(self, widget: QCheckBox):
+        def on_callback(*args):
+            widget.setChecked(self.get())
+        def on_change(*args):
+            self.set(widget.isChecked())
+        on_callback()
+        self.register_callback(uuid.uuid4(), on_callback)
+        widget.clicked.connect(on_change)
+
+
 class Model:
     def __init__(self):
         self.__n_workers = Variable(os.cpu_count())
@@ -141,6 +151,7 @@ class Model:
         #
         # Cell finding
         #
+        self.__bypass_training = Variable(False)
         self.__fixed_blob_path = Variable("")
         self.__moving_blob_path = Variable("")
         self.__fixed_blob_threshold = Variable(100.)
@@ -234,6 +245,7 @@ class Model:
             fixed_display_threshold=self.fixed_display_threshold,
             moving_display_threshold=self.moving_display_threshold,
             rough_interpolator=self.rough_interpolator,
+            bypass_training=self.bypass_training,
             fixed_blob_path=self.fixed_blob_path,
             moving_blob_path=self.moving_blob_path,
             fixed_blob_threshold=self.fixed_blob_threshold,
@@ -432,6 +444,10 @@ class Model:
     @property
     def rough_interpolator(self) -> Variable:
         return self.__rough_interpolator
+
+    @property
+    def  bypass_training(self) -> Variable:
+        return self.__bypass_training
 
     @property
     def fixed_blob_path(self) -> Variable:

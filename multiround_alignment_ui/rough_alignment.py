@@ -1,3 +1,4 @@
+import numpy as np
 import os
 
 from PyQt5.QtCore import QProcess
@@ -5,6 +6,7 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QTextEdit, QGroup
 
 from multiround_alignment_ui.utils import fixed_neuroglancer_path_is_valid, moving_neuroglancer_path_is_valid, \
     fixed_neuroglancer_url, moving_neuroglancer_url
+from precomputed_tif.client import ArrayReader
 
 
 class RoughAlignmentWidget(QWidget):
@@ -65,10 +67,18 @@ class RoughAlignmentWidget(QWidget):
             self.process.kill()
             return
         self.running = True
+        url = fixed_neuroglancer_url(self.model)
+        for level_idx in range(0, 6):
+            level = 2 ** level_idx
+            fixed_array = ArrayReader(url, format='blockfs', level = level)
+            if np.min(fixed_array.shape) < 50 and \
+                    np.max(fixed_array.shape) < 1000:
+                break
+
         initial_rotation = "%f,%f,%f" % (
-            -self.model.angle_x.get(),
-            -self.model.angle_y.get(),
-            -self.model.angle_z.get())
+            self.model.angle_x.get(),
+            self.model.angle_y.get(),
+            self.model.angle_z.get())
         initial_translation = "%f,%f,%f" % (
             self.model.offset_x.get(),
             self.model.offset_y.get(),
@@ -77,11 +87,13 @@ class RoughAlignmentWidget(QWidget):
             self.model.center_x.get(),
             self.model.center_y.get(),
             self.model.center_z.get())
+        self.stdout.clear()
         self.process = QProcess(self)
         self.process.readyReadStandardOutput.connect(self.on_stdout)
         self.process.readyReadStandardError.connect(self.on_stderr)
         self.process.started.connect(self.on_process_started)
         self.process.finished.connect(self.on_process_finished)
+        working_dir = os.path.join(self.model.output_path.get(), "alignment")
         result = self.process.start(
                 "phathom-non-rigid-registration",
                 ["--fixed-url", fixed_neuroglancer_url(self.model),
@@ -91,7 +103,10 @@ class RoughAlignmentWidget(QWidget):
                  "--output", self.model.rough_interpolator.get(),
                  "--initial-rotation=" + initial_rotation,
                  "--initial-translation=" + initial_translation,
-                 "--rotation-center=" + rotation_center]
+                 "--rotation-center=" + rotation_center,
+                 "--mipmap-level=" + str(level),
+                 "--working-dir", working_dir,
+                 "--invert"]
             )
         self.go_button.setText("Cancel")
 

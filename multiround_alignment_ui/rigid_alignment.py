@@ -279,46 +279,45 @@ class RigidAlignmentWidget(QWidget, OnActivateMixin):
 
     def apply_translation(self, *args):
         if self.view and self.level:
-            translation_transform = STTransform(
-                translate=(
-                    self.model.offset_x.get() / self.level,
-                    self.model.offset_y.get() / self.level,
-                    self.model.offset_z.get() / self.level
-                )
-            )
             rmatrix = np.eye(4)
-            rmatrix[:3, :3] = rotation_matrix((
-                self.model.angle_z.get() * np.pi / 180,
-                self.model.angle_y.get() * np.pi / 180,
-                self.model.angle_x.get() * np.pi / 180
-            ))[::-1, ::-1]
-            tmatrix = np.array([
+            r = rotation_matrix((self.model.angle_z.get() * np.pi / 180,
+                                 self.model.angle_y.get() * np.pi / 180,
+                                 self.model.angle_x.get() * np.pi / 180))
+
+            rmatrix[:3, :3] = r[::-1, ::-1]
+            cmatrix = np.array([
                 self.model.center_x.get() / self.level,
                 self.model.center_y.get() / self.level,
                 self.model.center_z.get() / self.level
+            ])
+            tmatrix =np.array([
+                self.model.offset_x.get() / self.level,
+                self.model.offset_y.get() / self.level,
+                self.model.offset_z.get() / self.level
             ])
             #
             # The last of 4 columns of the affine transform is the
             # translation. The translation is the rotated center minus the
             # offset plus the center, not rotated.
             #
-            rmatrix[3, :3] = rmatrix[:3, :3].dot(-tmatrix)
-            rmatrix[3, 0] += self.model.offset_x.get() / self.level
-            rmatrix[3, 1] += self.model.offset_y.get() / self.level
-            rmatrix[3, 2] += self.model.offset_z.get() / self.level
-            rmatrix[3, :3] += tmatrix
+            rmatrix[3, :3] = rmatrix[:3, :3].dot(tmatrix-cmatrix) + cmatrix
             rotate_transform = MatrixTransform(rmatrix)
             self.translation_frame.transform = rotate_transform
             self.center_frame.transform = MatrixTransform(
-                np.array([[1, 0, 0, tmatrix[0]],
-                          [0, 1, 0, tmatrix[1]],
-                          [0, 0, 1, tmatrix[2]],
+                np.array([[1, 0, 0, cmatrix[0]],
+                          [0, 1, 0, cmatrix[1]],
+                          [0, 0, 1, cmatrix[2]],
                           [0, 0, 0, 1]])
             )
             self.scene.update()
 
     def draw_scene(self):
         self.fixed_frame = scene.node.Node(self.view.scene)
+        self.fixed_frame.transform= STTransform(translate=(
+            -self.moving_volume.shape[2] // 2,
+            -self.moving_volume.shape[1] // 2,
+            -500
+        ))
         fixed_volume = scene.visuals.Volume(
             self.fixed_volume,
             parent = self.fixed_frame,
@@ -339,7 +338,7 @@ class RigidAlignmentWidget(QWidget, OnActivateMixin):
         # placed away from the center.
         #
         self.translation_frame = scene.node.Node(
-            self.view.scene)
+            self.fixed_frame)
 
         moving_volume = scene.visuals.Volume(
             self.moving_volume,

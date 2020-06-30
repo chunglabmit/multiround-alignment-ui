@@ -236,20 +236,32 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
     def on_activated(self):
         self.update_controls()
 
+    def fixed_coords_path(self) -> str:
+        if self.model.bypass_training.get():
+            return self.model.fixed_blob_path.get()
+        else:
+            return self.model.fixed_coords_path.get()
+
+    def moving_coords_path(self) -> str:
+        if self.model.bypass_training.get():
+            return self.model.moving_blob_path.get()
+        else:
+            return self.model.moving_coords_path.get()
+
     def update_controls(self):
         idx = self.current_round_idx
         transform_path = self.model.rough_interpolator.get() if idx == 0 \
             else self.model.fit_nonrigid_transform_inverse_path[idx-1].get()
         for src_paths, dest_paths, widget, name, re_name in (
                 (
-                    [self.model.fixed_coords_path.get()],
+                    [self.fixed_coords_path()],
                     [self.model.fixed_geometric_features_path.get()],
                     self.fixed_geometric_features_button,
                     "Calculate fixed geometric features",
                     "Recalculate fixed geometric features"
                 ),
                 (
-                    [self.model.moving_coords_path.get()],
+                    [self.moving_coords_path()],
                     [self.model.moving_geometric_features_path.get()],
                     self.moving_geometric_features_button,
                     "Calculate moving geometric features",
@@ -257,8 +269,8 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
                 ),
                 (
                     [
-                        self.model.fixed_coords_path.get(),
-                        self.model.moving_coords_path.get()
+                        self.fixed_coords_path(),
+                        self.moving_coords_path()
                     ],
                     [
                         self.model.fixed_geometric_features_path.get(),
@@ -270,8 +282,8 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
                 ),
                 (
                     [
-                        self.model.fixed_coords_path.get(),
-                        self.model.moving_coords_path.get(),
+                        self.fixed_coords_path(),
+                        self.moving_coords_path(),
                         self.model.fixed_geometric_features_path.get(),
                         self.model.moving_geometric_features_path.get(),
                         transform_path
@@ -336,7 +348,7 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
         with tqdm_progress() as result:
             geometric_features(
                 [
-                    "--input", self.model.fixed_coords_path.get(),
+                    "--input", self.fixed_coords_path(),
                     "--output", self.model.fixed_geometric_features_path.get(),
                     "--voxel-size", voxel_size(self.model),
                     "--n-workers", str(self.model.n_workers.get())
@@ -349,7 +361,7 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
         with tqdm_progress() as result:
             geometric_features(
                 [
-                    "--input", self.model.moving_coords_path.get(),
+                    "--input", self.moving_coords_path(),
                     "--output", self.model.moving_geometric_features_path.get(),
                     "--voxel-size", voxel_size(self.model),
                     "--n-workers", str(self.model.n_workers.get())
@@ -368,8 +380,8 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
             else self.model.fit_nonrigid_transform_inverse_path[idx-1]
         with tqdm_progress():
             find_neighbors([str(_) for _ in (
-                "--fixed-coords", self.model.fixed_coords_path.get(),
-                "--moving-coords", self.model.moving_coords_path.get(),
+                "--fixed-coords", self.fixed_coords_path(),
+                "--moving-coords", self.moving_coords_path(),
                 "--fixed-features",
                 self.model.fixed_geometric_features_path.get(),
                 "--moving-features",
@@ -470,6 +482,9 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
             # Need to set the paths for the appended - this is the
             # easiest way.
             self.on_output_path_changed()
+        if self.current_refinement_round_widget.value() >= n_rounds:
+            self.current_refinement_round_widget.setValue(n_rounds)
+        self.current_refinement_round_widget.setMaximum(n_rounds)
 
     @property
     def current_round_idx(self):

@@ -16,7 +16,7 @@ from mp_shared_memory import SharedMemory
 from nuggt.utils.ngutils import cubehelix_shader, layer
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QGroupBox, QHBoxLayout, \
     QLabel, QDoubleSpinBox, QSpinBox, QPushButton, QDialog, QApplication, \
-    QDialogButtonBox, QMessageBox
+    QDialogButtonBox, QMessageBox, QCheckBox
 
 from .model import Model
 from .utils import tqdm_progress, create_neuroglancer_viewer, \
@@ -78,6 +78,15 @@ class CellDetectionWidget(QWidget, OnActivateMixin):
         #
         top_layout = QVBoxLayout()
         self.setLayout(top_layout)
+        group_box = QGroupBox("Strategy")
+        top_layout.addWidget(group_box)
+        layout = QVBoxLayout()
+        group_box.setLayout(layout)
+        bypass_training_checkbox = QCheckBox("Bypass training")
+        layout.addWidget(bypass_training_checkbox)
+        self.model.bypass_training.bind_checkbox(bypass_training_checkbox)
+        self.model.bypass_training.register_callback(
+            "cell-detection", self.update_controls)
         #
         # Fixed
         #
@@ -184,36 +193,37 @@ class CellDetectionWidget(QWidget, OnActivateMixin):
     def on_activated(self):
         self.update_controls()
 
-    def update_controls(self):
+    def update_controls(self, *args):
         """
         Update the button text and enabled status
         """
         can_run_all = True
-        for src_path, blob_path, widget, name in (
+        do_bypass = self.model.bypass_training.get()
+        for src_path, blob_path, widget, name, bypass in (
                 (self.model.fixed_preprocessed_path.get(),
                  self.model.fixed_blob_path.get(),
                  self.fixed_detect_blobs_button,
-                 "fixed blob detection"),
+                 "fixed blob detection", False),
                 (self.model.moving_preprocessed_path.get(),
                  self.model.moving_blob_path.get(),
                  self.moving_detect_blobs_button,
-                 "moving blob detection"),
+                 "moving blob detection", False),
                 (self.model.fixed_blob_path.get(),
                  self.model.fixed_patches_path.get(),
                  self.fixed_collect_patches_button,
-                 "fixed patch collection"),
+                 "fixed patch collection", True),
                 (self.model.moving_blob_path.get(),
                  self.model.moving_patches_path.get(),
                  self.moving_collect_patches_button,
-                 "moving patch collection"),
+                 "moving patch collection", True),
                 (self.model.fixed_patches_path.get(),
                  self.model.fixed_model_path.get(),
                  self.fixed_train_blobs_button,
-                 "fixed training"),
+                 "fixed training", True),
                 (self.model.moving_patches_path.get(),
                  self.model.moving_model_path.get(),
                  self.moving_train_blobs_button,
-                 "moving training")
+                 "moving training", True)
         ):
             run_name = "Run %s" % name
             rerun_name = "Rerun %s" % name
@@ -222,7 +232,7 @@ class CellDetectionWidget(QWidget, OnActivateMixin):
                 widget.setText(run_name)
                 can_run_all = False
             else:
-                widget.setDisabled(False)
+                widget.setDisabled(bypass and do_bypass)
                 if os.path.exists(blob_path):
                     widget.setText(rerun_name)
                     can_run_all = False
@@ -251,6 +261,9 @@ class CellDetectionWidget(QWidget, OnActivateMixin):
             ]
             detect_blobs_main(args)
         self.update_controls()
+        with open(self.model.fixed_blob_path.get()) as fd:
+            n_blobs = len(json.load(fd))
+        set_status_bar_message("Found %d blobs in fixed volume" % n_blobs)
 
     def run_moving_detect_blobs(self, *args):
         source_glob = os.path.join(self.model.moving_preprocessed_path.get(),
@@ -267,6 +280,9 @@ class CellDetectionWidget(QWidget, OnActivateMixin):
             ]
             detect_blobs_main(args)
         self.update_controls()
+        with open(self.model.moving_blob_path.get()) as fd:
+            n_blobs = len(json.load(fd))
+        set_status_bar_message("Found %d blobs in moving volume" % n_blobs)
 
     def run_fixed_collect_patches(self, *args):
         source_glob = os.path.join(self.model.fixed_preprocessed_path.get(),
@@ -319,6 +335,8 @@ class CellDetectionWidget(QWidget, OnActivateMixin):
         self.update_controls()
 
     def on_fixed_training_done(self, *args):
+        if not os.path.exists(self.model.fixed_model_path.get()):
+            return
         with open(self.model.fixed_model_path.get(), "rb") as fd:
             model = pickle.load(fd)
         pred_probs = model["pred_probs"]
@@ -331,6 +349,8 @@ class CellDetectionWidget(QWidget, OnActivateMixin):
             json.dump(coords, fd)
 
     def on_moving_training_done(self, *args):
+        if not os.path.exists(self.model.moving_model_path.get()):
+            return
         with open(self.model.moving_model_path.get(), "rb") as fd:
             model = pickle.load(fd)
         pred_probs = model["pred_probs"]
@@ -376,6 +396,7 @@ def read_patches(patches_file, model):
             results.append(memory.copy())
     return results
 
+
 def run_training(parent_widget,
                  model,
                  name,
@@ -417,28 +438,26 @@ def run_training(parent_widget,
                 multipliers=[40.0],
                 shaders=[cubehelix_shader]
             )
-        if not result.result():
-            return False
-        dlayout.addWidget(window)
-        button_box = QDialogButtonBox(
-            QDialogButtonBox.Ok
-        )
-        dlayout.addWidget(button_box)
-        return True
+            dlayout.addWidget(window)
+            button_box = QDialogButtonBox(
+                QDialogButtonBox.Ok
+            )
+            dlayout.addWidget(button_box)
 
-        def want_to_save(*args):
-            buttons = QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel
-            result = QMessageBox.question(
-                dialog,
-                "Save training",
-                "Do you want to save your training before exiting?",
-                buttons, QMessageBox.Save)
-            if result == QMessageBox.Save:
-                window.fileSave()
-            if result != QMessageBox.Cancel:
-                dialog.close()
+            def want_to_save(*args):
+                buttons = QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel
+                result = QMessageBox.question(
+                    dialog,
+                    "Save training",
+                    "Do you want to save your training before exiting?",
+                    buttons, QMessageBox.Save)
+                if result == QMessageBox.Save:
+                    window.fileSave()
+                if result != QMessageBox.Cancel:
+                    dialog.close()
 
-        button_box.accepted.connect(want_to_save)
-        button_box.rejected.connect(want_to_save)
-        dialog.setModal(True)
-        dialog.exec()
+            button_box.accepted.connect(want_to_save)
+            button_box.rejected.connect(want_to_save)
+            dialog.setModal(True)
+            result = dialog.exec()
+            return result

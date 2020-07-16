@@ -246,16 +246,29 @@ class CellDetectionWidget(QWidget, OnActivateMixin):
         self.run_moving_detect_blobs()
         self.run_moving_collect_patches()
 
+    def scale_xy(self, input):
+        return input / self.model.x_voxel_size.get()
+
+    def scale_z(self, input):
+        return input / self.model.z_voxel_size.get()
+
     def run_fixed_detect_blobs(self, *args):
         source_glob = os.path.join(self.model.fixed_preprocessed_path.get(),
                                    "*.tif*")
+        dog_low = self.model.fixed_low_sigma.get()
+        dog_high = dog_low * 3
+        min_distance = self.model.fixed_min_distance.get()
         with tqdm_progress():
             args = [
                 "--source", source_glob,
                 "--output", self.model.fixed_blob_path.get(),
-                "--dog-low", str(self.model.fixed_low_sigma.get()),
+                "--dog-low-xy", str(self.scale_xy(dog_low)),
+                "--dog-high-xy", str(self.scale_xy(dog_high)),
+                "--dog-low-z", str(self.scale_z(dog_low)),
+                "--dog-high-z", str(self.scale_z(dog_high)),
                 "--threshold", str(self.model.fixed_blob_threshold.get()),
-                "--min-distance", str(self.model.fixed_min_distance.get()),
+                "--min-distance-xy", str(self.scale_xy(min_distance)),
+                "--min-distance-z", str(self.scale_z(min_distance)),
                 "--n-cpus", str(self.model.n_workers.get()),
                 "--n-io-cpus", str(self.model.n_io_workers.get())
             ]
@@ -268,13 +281,20 @@ class CellDetectionWidget(QWidget, OnActivateMixin):
     def run_moving_detect_blobs(self, *args):
         source_glob = os.path.join(self.model.moving_preprocessed_path.get(),
                                    "*.tif*")
+        dog_low = self.model.moving_low_sigma.get()
+        dog_high = dog_low * 3
+        min_distance = self.model.moving_min_distance.get()
         with tqdm_progress():
             args = [
                 "--source", source_glob,
                 "--output", self.model.moving_blob_path.get(),
-                "--dog-low", str(self.model.moving_low_sigma.get()),
+                "--dog-low-xy", str(self.scale_xy(dog_low)),
+                "--dog-high-xy", str(self.scale_xy(dog_high)),
+                "--dog-low-z", str(self.scale_z(dog_low)),
+                "--dog-high-z", str(self.scale_z(dog_high)),
                 "--threshold", str(self.model.moving_blob_threshold.get()),
-                "--min-distance", str(self.model.moving_min_distance.get()),
+                "--min-distance-xy", str(self.scale_xy(min_distance)),
+                "--min-distance-z", str(self.scale_z(min_distance)),
                 "--n-cpus", str(self.model.n_workers.get()),
                 "--n-io-cpus", str(self.model.n_io_workers.get())
             ]

@@ -45,9 +45,22 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
         # Geometric features buttons
         #
         group_box = QGroupBox("Geometric features")
-        glayout = QHBoxLayout()
+        gglayout = QVBoxLayout()
         layout.addWidget(group_box)
-        group_box.setLayout(glayout)
+        group_box.setLayout(gglayout)
+        glayout = QHBoxLayout()
+        gglayout.addLayout(glayout)
+        glayout.addWidget(QLabel("# geometric neighbors"))
+        self.n_geometric_neighbors_widget = QSpinBox()
+        glayout.addWidget(self.n_geometric_neighbors_widget)
+        self.n_geometric_neighbors_widget.setMinimum(3)
+        self.n_geometric_neighbors_widget.setMaximum(6)
+        self.model.n_geometric_neighbors.bind_spin_box(
+            self.n_geometric_neighbors_widget)
+        glayout.addStretch(1)
+
+        glayout = QHBoxLayout()
+        gglayout.addLayout(glayout)
         self.fixed_geometric_features_button = QPushButton(
             "Calculate fixed geometric features")
         glayout.addWidget(self.fixed_geometric_features_button)
@@ -351,7 +364,8 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
                     "--input", self.fixed_coords_path(),
                     "--output", self.model.fixed_geometric_features_path.get(),
                     "--voxel-size", voxel_size(self.model),
-                    "--n-workers", str(self.model.n_workers.get())
+                    "--n-workers", str(self.model.n_workers.get()),
+                    "--n-neighbors", str(self.model.n_geometric_neighbors.get())
                 ]
             )
         self.update_controls()
@@ -364,7 +378,8 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
                     "--input", self.moving_coords_path(),
                     "--output", self.model.moving_geometric_features_path.get(),
                     "--voxel-size", voxel_size(self.model),
-                    "--n-workers", str(self.model.n_workers.get())
+                    "--n-workers", str(self.model.n_workers.get()),
+                    "--n-neighbors", str(self.model.n_geometric_neighbors.get())
                 ]
             )
         self.update_controls()

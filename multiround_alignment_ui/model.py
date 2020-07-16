@@ -171,6 +171,7 @@ class Model:
         #
         self.__fixed_geometric_features_path = Variable("")
         self.__moving_geometric_features_path = Variable("")
+        self.__n_geometric_neighbors = Variable(3)
         self.__n_refinement_rounds = Variable(5)
         self.__find_neighbors_radius = [
             Variable(150), Variable(125), Variable(100), Variable(75),
@@ -262,6 +263,7 @@ class Model:
             moving_coords_path=self.moving_coords_path,
             fixed_geometric_features_path=self.fixed_geometric_features_path,
             moving_geometric_features_path=self.moving_geometric_features_path,
+            n_geometric_neighbors=self.n_geometric_neighbors,
             n_refinement_rounds=self.n_refinement_rounds,
             find_neighbors_radius=self.find_neighbors_radius,
             find_neighbors_feature_distance=
@@ -512,6 +514,10 @@ class Model:
     @property
     def moving_geometric_features_path(self) -> Variable:
         return self.__moving_geometric_features_path
+
+    @property
+    def n_geometric_neighbors(self) -> Variable:
+        return self.__n_geometric_neighbors
 
     @property
     def n_refinement_rounds(self) -> Variable:

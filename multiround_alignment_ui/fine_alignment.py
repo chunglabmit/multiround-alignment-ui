@@ -131,6 +131,19 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
             self.model.find_neighbors_radius[self.current_round_idx].set(value)
         self.radius_widget.valueChanged.connect(on_radius_change)
         hlayout.addStretch(1)
+        # max neighbors
+        hlayout = QHBoxLayout()
+        glayout.addLayout(hlayout)
+        hlayout.addWidget(QLabel("Max neighbors:"))
+        self.max_neighbors_widget = QSpinBox()
+        self.max_neighbors_widget.setMinimum(2)
+        self.max_neighbors_widget.setMaximum(10000)
+        hlayout.addWidget(self.max_neighbors_widget)
+        def on_max_neighbors_change(value):
+            self.model.max_neighbors[self.current_round_idx].set(value)
+        self.max_neighbors_widget.valueChanged.connect(on_max_neighbors_change)
+        hlayout.addStretch(1)
+
         # feature distance
         hlayout = QHBoxLayout()
         glayout.addLayout(hlayout)
@@ -412,6 +425,8 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
                 self.model.find_neighbors_feature_distance[idx].get(),
                 "--prom-thresh",
                 self.model.find_neighbors_prominence_threshold[idx].get(),
+                "--max-neighbors",
+                self.model.max_neighbors[idx].get(),
                 "--n-workers", self.model.n_workers.get())
             ])
         self.update_controls()
@@ -469,6 +484,7 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
         # Extend the numeric variables
         #
         for variables in (
+            self.model.max_neighbors,
             self.model.find_neighbors_radius,
             self.model.find_neighbors_feature_distance,
             self.model.find_neighbors_prominence_threshold,
@@ -507,6 +523,8 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
 
     def on_current_round_changed(self, *args):
         variables_and_widgets = (
+            (self.model.max_neighbors,
+             self.max_neighbors_widget),
             (self.model.find_neighbors_radius,
              self.radius_widget),
             (self.model.find_neighbors_feature_distance,

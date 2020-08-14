@@ -131,6 +131,14 @@ class Model:
         self.__fixed_precomputed_path = Variable("")
         self.__moving_precomputed_path = Variable("")
         #
+        # Nuggt align
+        #
+        self.__nuggt_points_path = Variable("")
+        self.__nuggt_rescaled_points_path = Variable("")
+        self.__nuggt_reference_url = Variable("")
+        self.__nuggt_moving_url = Variable("")
+        self.__nuggt_decimation_level = Variable(3)
+        #
         # Rigid alignment
         #
         self.__center_x = Variable(0)
@@ -235,6 +243,11 @@ class Model:
             moving_precomputed_path=self.moving_precomputed_path,
             moving_preprocessed_path=self.moving_preprocessed_path,
             output_path=self.output_path,
+            nuggt_points_path=self.nuggt_points_path,
+            nuggt_rescaled_points_path=self.nuggt_rescaled_points_path,
+            nuggt_reference_url=self.nuggt_reference_url,
+            nuggt_moving_url=self.nuggt_moving_url,
+            nuggt_decimation_level=self.nuggt_decimation_level,
             center_x=self.center_x,
             center_y=self.center_y,
             center_z=self.center_z,
@@ -400,6 +413,26 @@ class Model:
     @property
     def moving_precomputed_path(self) -> Variable:
         return self.__moving_precomputed_path
+
+    @property
+    def nuggt_decimation_level(self) -> Variable:
+        return self.__nuggt_decimation_level
+
+    @property
+    def nuggt_points_path(self) -> Variable:
+        return self.__nuggt_points_path
+
+    @property
+    def nuggt_rescaled_points_path(self) -> Variable:
+        return self.__nuggt_rescaled_points_path
+
+    @property
+    def nuggt_reference_url(self) -> Variable:
+        return self.__nuggt_reference_url
+
+    @property
+    def nuggt_moving_url(self) -> Variable:
+        return self.__nuggt_moving_url
 
     @property
     def center_x(self) -> Variable:

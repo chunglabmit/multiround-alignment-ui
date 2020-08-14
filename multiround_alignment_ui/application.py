@@ -13,12 +13,13 @@ from PyQt5.QtGui import QKeySequence
 from PyQt5.QtWidgets import QApplication, QMainWindow, QTabWidget, QWidget, QFileDialog, QMessageBox
 from PyQt5.QtWidgets import QVBoxLayout, QStatusBar, QProgressBar, QLabel
 from PyQt5.QtWidgets import QPushButton, QMenu, QShortcut
-import vispy
-vispy.use("PyQt5", "gl2")
+#import vispy
+#vispy.use("PyQt5", "gl2")
 from .model import Model
 from .cell_detection import CellDetectionWidget
 from .configuration import ConfigurationWidget
 from .fine_alignment import FineAlignmentWidget
+from .neuroglancer_alignment import  NeuroglancerAlignmentWidget
 from .preprocessing import PreprocessingWidget
 from .rigid_alignment import RigidAlignmentWidget
 from .rough_alignment import RoughAlignmentWidget
@@ -27,10 +28,10 @@ from .utils import setup_tqdm_progress, OnActivateMixin
 
 
 class ApplicationWindow(QMainWindow):
-    def __init__(self, model):
+    def __init__(self, session_file):
         super(ApplicationWindow, self).__init__()
         self.setGeometry(0, 0, 1024, 768)
-        self.model = model
+        self.model = Model()
         #
         # Menus
         #
@@ -57,7 +58,8 @@ class ApplicationWindow(QMainWindow):
         for name, widget_class in (
                 ("Configuration", ConfigurationWidget),
                 ("Preprocessing", PreprocessingWidget),
-                ("Rigid alignment", RigidAlignmentWidget),
+                ("Neuroglancer alignment", NeuroglancerAlignmentWidget),
+#                ("Rigid alignment", RigidAlignmentWidget),
                 ("Rough alignment", RoughAlignmentWidget),
                 ("Cell detection", CellDetectionWidget),
                 ("Fine alignment", FineAlignmentWidget),
@@ -75,6 +77,8 @@ class ApplicationWindow(QMainWindow):
         cancel_button = QPushButton("Cancel")
         self.status_bar.addWidget(cancel_button)
         setup_tqdm_progress(progress, message, cancel_button, self.status_bar)
+        if session_file is not None:
+            self.model.read(session_file)
 
     def on_tab_changed(self, *args):
         widget = self.tabs.currentWidget()
@@ -125,10 +129,7 @@ class ApplicationWindow(QMainWindow):
 
 def run_application(session_file):
     app = QApplication(sys.argv)
-    model = Model()
-    if session_file is not None:
-        model.read(session_file)
-    window = ApplicationWindow(model)
+    window = ApplicationWindow(session_file)
     window.setWindowTitle("Multiround alignment")
     window.show()
     sys.exit(app.exec())

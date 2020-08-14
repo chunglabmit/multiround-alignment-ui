@@ -17,9 +17,10 @@ from precomputed_tif.wsgi_webserver import serve_precomputed
 import tqdm
 import threading
 import traceback
-from PyQt5.QtWidgets import QPushButton, QMessageBox, QApplication
+from PyQt5.QtWidgets import QPushButton, QMessageBox, QApplication, QLineEdit,\
+    QWidget, QFileDialog
 
-from multiround_alignment_ui.model import Model
+from multiround_alignment_ui.model import Model, Variable
 
 PROGRESS = None
 MESSAGE = None
@@ -262,6 +263,22 @@ def create_neuroglancer_viewer(model:Model) -> neuroglancer.Viewer:
 class OnActivateMixin:
     def on_activated(self):
         """Do something when the tab is uncovered"""
+
+def connect_input_and_button(window: QWidget,
+                          name:str,
+                          input:QLineEdit,
+                          button:QPushButton,
+                          variable:Variable):
+    input.setText(str(variable.get()))
+    variable.bind_line_edit(input)
+    def onButtonPressed(*args):
+        newValue = QFileDialog.getExistingDirectory(window, name,
+                                                    input.text())
+        if newValue is not None:
+            input.setText(newValue)
+            variable.set(newValue)
+    button.pressed.connect(onButtonPressed)
+
 
 if __name__ == "__main__":
     import time

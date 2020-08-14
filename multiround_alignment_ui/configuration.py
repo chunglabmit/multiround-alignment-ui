@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import QWidget, QGridLayout, QLabel, QLineEdit, QPushButton
     QDoubleSpinBox
 from PyQt5.QtWidgets import QFileDialog, QSpinBox, QVBoxLayout
 from .model import Model, Variable
-
+from .utils import connect_input_and_button
 
 class ConfigurationWidget(QWidget):
     def __init__(self, model:Model):
@@ -27,7 +27,7 @@ class ConfigurationWidget(QWidget):
             layout.addWidget(input, row_idx, 1)
             button = QPushButton("...")
             layout.addWidget(button, row_idx, 2)
-            self.connectInputAndButton(name, input, button, variable)
+            self.connect_input_and_button(name, input, button, variable)
         row_idx = len(paths)
         #
         # Voxel size
@@ -105,17 +105,9 @@ class ConfigurationWidget(QWidget):
 
         top_layout.addStretch(1)
 
-    def connectInputAndButton(self,
-                              name:str,
-                              input:QLineEdit,
-                              button:QPushButton,
-                              variable:Variable):
-        input.setText(str(variable.get()))
-        variable.bind_line_edit(input)
-        def onButtonPressed(*args):
-            newValue = QFileDialog.getExistingDirectory(self, name,
-                                                        input.text())
-            if newValue is not None:
-                input.setText(newValue)
-                variable.set(newValue)
-        button.pressed.connect(onButtonPressed)
+    def connect_input_and_button(self,
+                          name:str,
+                          input:QLineEdit,
+                          button:QPushButton,
+                          variable:Variable):
+        connect_input_and_button(self, name, input, button, variable)

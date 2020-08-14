@@ -1,7 +1,7 @@
-from PyQt5.QtWidgets import QWidget, QGroupBox, QVBoxLayout, QMessageBox
+from PyQt5.QtWidgets import QWidget, QGroupBox, QVBoxLayout, QMessageBox, QHBoxLayout, QLineEdit
 from PyQt5.QtWidgets import QLabel, QPushButton
 from .model import Model, Variable
-from .utils import tqdm_progress
+from .utils import tqdm_progress, connect_input_and_button
 import glob
 import os
 import uuid
@@ -63,6 +63,30 @@ class PreprocessingChannel(QGroupBox):
 
         self.dest_widget = QLabel()
         layout.addWidget(self.dest_widget)
+
+        hlayout = QHBoxLayout()
+        layout.addLayout(hlayout)
+        hlayout.addWidget(QLabel("Preprocessed path:"))
+        self.dest_path_widget = QLineEdit()
+        hlayout.addWidget(self.dest_path_widget)
+        self.dest_path_button = QPushButton("...")
+        hlayout.addWidget(self.dest_path_button)
+        connect_input_and_button(self, "Preprocessed path",
+                                 self.dest_path_widget,
+                                 self.dest_path_button,
+                                 dest_variable)
+
+        hlayout = QHBoxLayout()
+        layout.addLayout(hlayout)
+        hlayout.addWidget(QLabel("Precomputed path:"))
+        self.precomputed_path_widget = QLineEdit()
+        hlayout.addWidget(self.precomputed_path_widget)
+        self.precomputed_path_button = QPushButton("...")
+        hlayout.addWidget(self.precomputed_path_button)
+        connect_input_and_button(self, "Precomputed path",
+                                 self.precomputed_path_widget,
+                                 self.precomputed_path_button,
+                                 precomputed_variable)
 
         self.preprocess_button = QPushButton()
         layout.addWidget(self.preprocess_button)

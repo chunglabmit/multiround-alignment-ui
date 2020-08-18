@@ -69,7 +69,7 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
         self.moving_geometric_features_button = QPushButton(
             "Calculate moving geometric features")
         glayout.addWidget(self.moving_geometric_features_button)
-        self.fixed_geometric_features_button.clicked.connect(
+        self.moving_geometric_features_button.clicked.connect(
             self.on_moving_geometric_features)
         self.all_geometric_features_button = QPushButton(
             "Calculate all geometric features")

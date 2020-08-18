@@ -32,6 +32,8 @@ class ApplicationWindow(QMainWindow):
         super(ApplicationWindow, self).__init__()
         self.setGeometry(0, 0, 1024, 768)
         self.model = Model()
+        if session_file is not None:
+            self.model.read(session_file)
         #
         # Menus
         #
@@ -77,8 +79,6 @@ class ApplicationWindow(QMainWindow):
         cancel_button = QPushButton("Cancel")
         self.status_bar.addWidget(cancel_button)
         setup_tqdm_progress(progress, message, cancel_button, self.status_bar)
-        if session_file is not None:
-            self.model.read(session_file)
 
     def on_tab_changed(self, *args):
         widget = self.tabs.currentWidget()

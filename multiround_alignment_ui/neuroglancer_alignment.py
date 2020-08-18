@@ -27,6 +27,7 @@ class NeuroglancerAlignmentWidget(QWidget, OnActivateMixin):
         self.setLayout(layout)
         self.model.output_path.register_callback("neuroglancer-alignment",
                                                  self.on_output_path_changed)
+        self.launched=False
         #
         # Decimation level
         #
@@ -98,6 +99,9 @@ class NeuroglancerAlignmentWidget(QWidget, OnActivateMixin):
         self.update_controls()
 
     def update_controls(self):
+        if not self.launched:
+            self.model.nuggt_reference_url.set("")
+            self.model.nuggt_moving_url.set("")
         if os.path.exists(self.model.nuggt_rescaled_points_path.get()):
             self.make_rough_alignment_button_widget.setEnabled(True)
         else:
@@ -163,6 +167,7 @@ class NeuroglancerAlignmentWidget(QWidget, OnActivateMixin):
             moving_url = self.viewer_pair.moving_viewer.get_viewer_url()
             self.model.nuggt_reference_url.set(reference_url)
             self.model.nuggt_moving_url.set(moving_url)
+            self.launched = True
         except:
             why = traceback.format_exc()
             QMessageBox.critical(None, "Error during execution", why)
@@ -188,7 +193,6 @@ class NeuroglancerAlignmentWidget(QWidget, OnActivateMixin):
             input,
             "--output",
             self.model.rough_interpolator.get(),
-            "--invert",
             "--image-size",
             "%d,%d,%d" % (xs, ys, zs)
         ])

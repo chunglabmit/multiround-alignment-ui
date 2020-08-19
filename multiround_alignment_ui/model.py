@@ -2,13 +2,19 @@
 # The model is a blackboard holding the parameters for running the multiround
 # alignment.
 #
+import enum
 import json
 import os
 import tempfile
 
 import typing
-from PyQt5.QtWidgets import QLineEdit, QSpinBox, QDoubleSpinBox, QLabel, QCheckBox
+from PyQt5.QtWidgets import QLineEdit, QSpinBox, QDoubleSpinBox, QLabel, QCheckBox, QComboBox
 import uuid
+
+
+class FindNeighborsMethod(enum.Enum):
+    POINTS="points"
+    CORRELATION="correlation"
 
 
 class Variable:
@@ -99,6 +105,15 @@ class Variable:
         self.register_callback(uuid.uuid4(), on_callback)
         widget.clicked.connect(on_change)
 
+    def bind_combobox(self, widget: QComboBox):
+        def on_callback(*args):
+            widget.setCurrentText(self.get())
+        def on_change(*args):
+            self.set(widget.currentText())
+        on_callback()
+        self.register_callback(uuid.uuid4(), on_callback)
+        widget.currentIndexChanged.connect(on_change)
+
 
 class Model:
     def __init__(self):
@@ -156,6 +171,7 @@ class Model:
         # Rough alignment
         #
         self.__rough_interpolator = Variable("")
+        self.__rough_inverse_interpolator = Variable("")
         #
         # Cell finding
         #
@@ -181,6 +197,11 @@ class Model:
         self.__moving_geometric_features_path = Variable("")
         self.__n_geometric_neighbors = Variable(3)
         self.__n_refinement_rounds = Variable(5)
+        #
+        # find-neighbors
+        self.__find_neighbors_method = [
+            Variable(FindNeighborsMethod.POINTS.value) for _ in range(5)]
+          # find-neighbors: Points
         self.__max_neighbors = [Variable(100) for _ in range(5)]
         self.__find_neighbors_radius = [
             Variable(150), Variable(125), Variable(100), Variable(75),
@@ -192,6 +213,16 @@ class Model:
         self.__find_neighbors_prominence_threshold = [
             Variable(0.3), Variable(0.4), Variable(0.5), Variable(0.6),
             Variable(0.7)
+        ]
+          # find-neighbors: correlation
+        self.__find_corr_neighbors_sigma = [
+            Variable(6.0) for _ in range(5)
+        ]
+        self.__find_corr_neighbors_radius = [
+            Variable(25.0) for _ in range(5)
+        ]
+        self.__find_corr_neighbors_min_correlation = [
+            Variable(.9) for _ in range(5)
         ]
         self.__find_neighbors_path = [
             Variable("") for _ in range(5)
@@ -260,6 +291,7 @@ class Model:
             fixed_display_threshold=self.fixed_display_threshold,
             moving_display_threshold=self.moving_display_threshold,
             rough_interpolator=self.rough_interpolator,
+            rough_inverse_interpolator=self.rough_inverse_interpolator,
             bypass_training=self.bypass_training,
             fixed_blob_path=self.fixed_blob_path,
             moving_blob_path=self.moving_blob_path,
@@ -278,13 +310,18 @@ class Model:
             fixed_geometric_features_path=self.fixed_geometric_features_path,
             moving_geometric_features_path=self.moving_geometric_features_path,
             n_geometric_neighbors=self.n_geometric_neighbors,
+            find_neighbors_method=self.find_neighbors_method,
             max_neighbors=self.__max_neighbors,
             n_refinement_rounds=self.n_refinement_rounds,
             find_neighbors_radius=self.find_neighbors_radius,
             find_neighbors_feature_distance=
             self.find_neighbors_feature_distance,
             find_neighbors_promience_threshold=
-            self.find_neighbors_prominence_threshold,
+                self.find_neighbors_prominence_threshold,
+            find_corr_neighbors_sigma=self.find_corr_neighbors_sigma,
+            find_corr_neighbors_radius=self.find_corr_neighbors_radius,
+            find_corr_neighbors_min_correlation=\
+                self.find_corr_neighbors_min_correlation,
             find_neighbors_path=self.find_neighbors_path,
             find_neighbors_pdf_path=self.find_neighbors_pdf_path,
             filter_matches_path=self.filter_matches_path,
@@ -483,6 +520,14 @@ class Model:
         return self.__rough_interpolator
 
     @property
+    def rough_inverse_interpolator(self) -> Variable:
+        return self.__rough_inverse_interpolator
+
+    @property
+    def rough_inverse_interpolator(self) -> Variable:
+        return self.__rough_inverse_interpolator
+
+    @property
     def  bypass_training(self) -> Variable:
         return self.__bypass_training
 
@@ -563,6 +608,10 @@ class Model:
         return self.__n_refinement_rounds
 
     @property
+    def find_neighbors_method(self) -> typing.List[Variable]:
+        return self.__find_neighbors_method
+
+    @property
     def find_neighbors_radius(self) -> typing.List[Variable]:
         return self.__find_neighbors_radius
 
@@ -573,6 +622,18 @@ class Model:
     @property
     def find_neighbors_prominence_threshold(self) -> typing.List[Variable]:
         return self.__find_neighbors_prominence_threshold
+
+    @property
+    def find_corr_neighbors_sigma(self) -> typing.List[Variable]:
+        return self.__find_corr_neighbors_sigma
+
+    @property
+    def find_corr_neighbors_radius(self) -> typing.List[Variable]:
+        return self.__find_corr_neighbors_radius
+
+    @property
+    def find_corr_neighbors_min_correlation(self) -> typing.List[Variable]:
+        return self.__find_corr_neighbors_min_correlation
 
     @property
     def find_neighbors_path(self) -> typing.List[Variable]:

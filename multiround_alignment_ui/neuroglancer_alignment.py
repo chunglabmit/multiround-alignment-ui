@@ -186,6 +186,8 @@ class NeuroglancerAlignmentWidget(QWidget, OnActivateMixin):
     def on_make_rough_alignment(self, *args):
         fixed_ar = ArrayReader(fixed_neuroglancer_url(self.model),
                                format="blockfs")
+        moving_ar = ArrayReader(moving_neuroglancer_url(self.model),
+                               format="blockfs")
         zs, ys, xs = fixed_ar.shape
         input = self.model.nuggt_rescaled_points_path.get()
         pickle_alignment([
@@ -193,6 +195,16 @@ class NeuroglancerAlignmentWidget(QWidget, OnActivateMixin):
             input,
             "--output",
             self.model.rough_interpolator.get(),
+            "--image-size",
+            "%d,%d,%d" % (xs, ys, zs)
+        ])
+        zs, ys, xs = moving_ar.shape
+        pickle_alignment([
+            "--input",
+            input,
+            "--output",
+            self.model.rough_inverse_interpolator.get(),
+            "--invert",
             "--image-size",
             "%d,%d,%d" % (xs, ys, zs)
         ])

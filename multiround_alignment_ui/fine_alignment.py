@@ -1,15 +1,16 @@
 import os
 
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QGroupBox, QHBoxLayout, \
-    QPushButton, QLabel, QSpinBox, QDoubleSpinBox
+    QPushButton, QLabel, QSpinBox, QDoubleSpinBox, QComboBox
 from PyQt5.QtGui import QDesktopServices
 from PyQt5.QtCore import QUrl
 from phathom.pipeline.geometric_features_cmd import main as geometric_features
 from phathom.pipeline.find_neighbors_cmd import main as find_neighbors
+from phathom.pipeline.find_corr_neighbors_cmd import main as find_corr_neighbors
 from phathom.pipeline.filter_matches_cmd import main as filter_matches
 from phathom.pipeline.fit_nonrigid_transform_cmd \
     import main as fit_nonrigid_transform
-from .model import Model, Variable
+from .model import Model, Variable, FindNeighborsMethod
 import pathlib
 
 from .utils import OnActivateMixin, tqdm_progress, fixed_neuroglancer_url, \
@@ -118,9 +119,28 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
         layout.addWidget(group_box)
         glayout = QVBoxLayout()
         group_box.setLayout(glayout)
-        # radius
+        # Method
         hlayout = QHBoxLayout()
         glayout.addLayout(hlayout)
+        hlayout.addWidget(QLabel("Method:"))
+        self.find_neighbors_method_widget = QComboBox()
+        self.find_neighbors_method_widget.addItems(
+            [FindNeighborsMethod.POINTS.value,
+             FindNeighborsMethod.CORRELATION.value]
+        )
+        hlayout.addWidget(self.find_neighbors_method_widget)
+
+        self.find_neighbors_method_widget.currentIndexChanged.connect(
+            self.on_find_neighbors_method_change
+        )
+        hlayout.addStretch(1)
+        self.find_neighbors_points_panel = QWidget()
+        glayout.addWidget(self.find_neighbors_points_panel)
+        playout = QVBoxLayout()
+        self.find_neighbors_points_panel.setLayout(playout)
+        # radius
+        hlayout = QHBoxLayout()
+        playout.addLayout(hlayout)
         hlayout.addWidget(QLabel("Radius:"))
         self.radius_widget = QDoubleSpinBox()
         self.radius_widget.setMinimum(1.0)
@@ -133,7 +153,7 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
         hlayout.addStretch(1)
         # max neighbors
         hlayout = QHBoxLayout()
-        glayout.addLayout(hlayout)
+        playout.addLayout(hlayout)
         hlayout.addWidget(QLabel("Max neighbors:"))
         self.max_neighbors_widget = QSpinBox()
         self.max_neighbors_widget.setMinimum(2)
@@ -146,7 +166,7 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
 
         # feature distance
         hlayout = QHBoxLayout()
-        glayout.addLayout(hlayout)
+        playout.addLayout(hlayout)
         hlayout.addWidget(QLabel("Maximum feature distance:"))
         self.feature_distance_widget = QDoubleSpinBox()
         self.feature_distance_widget.setMinimum(.5)
@@ -161,7 +181,7 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
         hlayout.addStretch(1)
         # prominence threshold
         hlayout = QHBoxLayout()
-        glayout.addLayout(hlayout)
+        playout.addLayout(hlayout)
         hlayout.addWidget(QLabel("Prominence threshold:"))
         self.prominence_threshold_widget = QDoubleSpinBox()
         self.prominence_threshold_widget.setMinimum(.01)
@@ -174,7 +194,60 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
         self.prominence_threshold_widget.valueChanged.connect(
             on_prominence_threshold_change)
         hlayout.addStretch(1)
+        self.find_neighbors_correlation_panel = QWidget()
+        glayout.addWidget(self.find_neighbors_correlation_panel)
+        playout = QVBoxLayout()
+        self.find_neighbors_correlation_panel.setLayout(playout)
+        # find-corr-neighbors sigma
+        hlayout = QHBoxLayout()
+        playout.addLayout(hlayout)
+        hlayout.addWidget(QLabel("Sigma (um):"))
+        self.find_corr_neighbors_sigma_widget = QDoubleSpinBox()
+        self.find_corr_neighbors_sigma_widget.setMinimum(0)
+        self.find_corr_neighbors_sigma_widget.setMaximum(20)
+        hlayout.addWidget(self.find_corr_neighbors_sigma_widget)
 
+        def on_corr_neighbors_sigma_change(value):
+            self.model.find_corr_neighbors_sigma[
+                self.current_round_idx].set(value)
+        self.find_corr_neighbors_sigma_widget.valueChanged.connect(
+            on_corr_neighbors_sigma_change
+        )
+        hlayout.addStretch(1)
+        # find-corr-neighbors radius
+        hlayout = QHBoxLayout()
+        playout.addLayout(hlayout)
+        hlayout.addWidget(QLabel("Radius (um):"))
+        self.find_corr_neighbors_radius_widget = QDoubleSpinBox()
+        self.find_corr_neighbors_radius_widget.setMinimum(1)
+        self.find_corr_neighbors_radius_widget.setMaximum(200)
+        hlayout.addWidget(self.find_corr_neighbors_radius_widget)
+
+        def on_corr_neighbors_radius_change(value):
+            self.model.find_corr_neighbors_radius[
+                self.current_round_idx].set(value)
+        self.find_corr_neighbors_radius_widget.valueChanged.connect(
+            on_corr_neighbors_radius_change
+        )
+        hlayout.addStretch(1)
+        # find-corr-neighbors min correlation
+        hlayout = QHBoxLayout()
+        playout.addLayout(hlayout)
+        hlayout.addWidget(QLabel("Minimum correlation:"))
+        self.find_corr_neighbors_min_correlation_widget = QDoubleSpinBox()
+        self.find_corr_neighbors_min_correlation_widget.setMinimum(0)
+        self.find_corr_neighbors_min_correlation_widget.setMaximum(1)
+        hlayout.addWidget(self.find_corr_neighbors_min_correlation_widget)
+
+        def on_corr_neighbors_min_correlation_change(value):
+            self.model.find_corr_neighbors_min_correlation[
+                self.current_round_idx].set(value)
+        self.find_corr_neighbors_min_correlation_widget.valueChanged.connect(
+            on_corr_neighbors_min_correlation_change
+        )
+        hlayout.addStretch(1)
+
+        # find-neighbors button
         self.find_neighbors_button = QPushButton("Run find-neighbors")
         self.find_neighbors_button.clicked.connect(
             self.on_find_neighbors)
@@ -262,6 +335,19 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
     def on_activated(self):
         self.update_controls()
 
+    def on_find_neighbors_method_change(self, value):
+        self.model.find_neighbors_method[self.current_round_idx].set(
+            self.find_neighbors_method_widget.currentText()
+        )
+        self.enable_find_neighbors_panels()
+
+    def enable_find_neighbors_panels(self):
+        enable_points = (
+            self.model.find_neighbors_method[self.current_round_idx].get() ==
+            FindNeighborsMethod.POINTS.value)
+        self.find_neighbors_points_panel.setVisible(enable_points)
+        self.find_neighbors_correlation_panel.setVisible(not enable_points)
+
     def fixed_coords_path(self) -> str:
         if self.model.bypass_training.get():
             return self.model.fixed_blob_path.get()
@@ -275,6 +361,7 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
             return self.model.moving_coords_path.get()
 
     def update_controls(self):
+        self.enable_find_neighbors_panels()
         idx = self.current_round_idx
         transform_path = self.model.rough_interpolator.get() if idx == 0 \
             else self.model.fit_nonrigid_transform_inverse_path[idx-1].get()
@@ -404,7 +491,44 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
 
     def on_find_neighbors(self, *args):
         idx = self.current_round_idx
-        interpolator_variable = self.model.rough_interpolator if idx == 0 \
+        if self.model.find_neighbors_method[idx].get() ==\
+                FindNeighborsMethod.POINTS.value:
+            self.on_find_neighbors_points()
+        else:
+            self.on_find_neighbors_correlation()
+
+    def on_find_neighbors_correlation(self):
+        idx = self.current_round_idx
+        interpolator_variable = \
+            self.model.rough_interpolator if idx == 0 \
+            else self.model.fit_nonrigid_transform_path[idx-1]
+        sigma_x, sigma_y, sigma_z = [
+            self.model.find_corr_neighbors_sigma[idx].get() / _.get()
+            for _ in (self.model.x_voxel_size, self.model.y_voxel_size,
+                      self.model.z_voxel_size)]
+        with tqdm_progress():
+            find_corr_neighbors([
+                str(_) for _ in (
+                    "--fixed-coords", self.model.fixed_blob_path.get(),
+                    "--fixed-url", fixed_neuroglancer_url(self.model),
+                    "--moving-url", moving_neuroglancer_url(self.model),
+                    "--transform", interpolator_variable.get(),
+                    "--output", self.model.find_neighbors_path.get(),
+                    "--sigma-x", sigma_x,
+                    "--sigma-y", sigma_y,
+                    "--sigma-z", sigma_z,
+                    "--radius", self.model.find_corr_neighbors_radius.get(),
+                    "--n-cores", self.model.n_workers.get(),
+                    "--min-correlation",
+                    self.model.find_corr_neighbors_min_correlation.get()
+                )
+            ])
+        self.update_controls()
+
+    def on_find_neighbors_points(self):
+        idx = self.current_round_idx
+        interpolator_variable = self.model.rough_inverse_interpolator\
+            if idx == 0 \
             else self.model.fit_nonrigid_transform_inverse_path[idx-1]
         with tqdm_progress():
             find_neighbors([str(_) for _ in (
@@ -485,9 +609,13 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
         #
         for variables in (
             self.model.max_neighbors,
+            self.model.find_neighbors_method,
             self.model.find_neighbors_radius,
             self.model.find_neighbors_feature_distance,
             self.model.find_neighbors_prominence_threshold,
+            self.model.find_corr_neighbors_sigma,
+            self.model.find_corr_neighbors_radius,
+            self.model.find_corr_neighbors_min_correlation,
             self.model.filter_matches_min_coherence,
             self.model.filter_matches_max_distance
         ):
@@ -531,6 +659,12 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
              self.feature_distance_widget),
             (self.model.find_neighbors_prominence_threshold,
              self.prominence_threshold_widget),
+            (self.model.find_corr_neighbors_sigma,
+             self.find_corr_neighbors_sigma_widget),
+            (self.model.find_corr_neighbors_radius,
+             self.find_corr_neighbors_radius_widget),
+            (self.model.find_corr_neighbors_min_correlation,
+             self.find_corr_neighbors_min_correlation_widget),
             (self.model.filter_matches_max_distance,
              self.maximum_distance_widget),
             (self.model.filter_matches_min_coherence,
@@ -545,6 +679,10 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
             widget.setValue(variable.get())
             on_change = lambda value, widget=widget: widget.setValue(value)
             variable.register_callback("fine-alignment", on_change)
+        on_change = lambda value: \
+            self.find_neighbors_method_widget.setCurrentText(value)
+        self.model.find_neighbors_method[self.current_round_idx]\
+            .register_callback("fine-alignment", on_change)
         self.last_round_idx = self.current_round_idx
         self.variables_have_been_hooked_to_widgets = True
         self.update_controls()

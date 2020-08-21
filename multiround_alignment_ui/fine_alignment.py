@@ -365,6 +365,8 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
         idx = self.current_round_idx
         transform_path = self.model.rough_interpolator.get() if idx == 0 \
             else self.model.fit_nonrigid_transform_inverse_path[idx-1].get()
+        self.find_neighbors_method_widget.setCurrentText(
+            self.model.find_neighbors_method[idx].get())
         for src_paths, dest_paths, widget, name, re_name in (
                 (
                     [self.fixed_coords_path()],
@@ -513,14 +515,15 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
                     "--fixed-url", fixed_neuroglancer_url(self.model),
                     "--moving-url", moving_neuroglancer_url(self.model),
                     "--transform", interpolator_variable.get(),
-                    "--output", self.model.find_neighbors_path.get(),
+                    "--output", self.model.find_neighbors_path[idx].get(),
+                    "--visualization-file", self.model.find_neighbors_pdf_path[idx].get(),
                     "--sigma-x", sigma_x,
                     "--sigma-y", sigma_y,
                     "--sigma-z", sigma_z,
-                    "--radius", self.model.find_corr_neighbors_radius.get(),
+                    "--radius", self.model.find_corr_neighbors_radius[idx].get(),
                     "--n-cores", self.model.n_workers.get(),
                     "--min-correlation",
-                    self.model.find_corr_neighbors_min_correlation.get()
+                    self.model.find_corr_neighbors_min_correlation[idx].get()
                 )
             ])
         self.update_controls()

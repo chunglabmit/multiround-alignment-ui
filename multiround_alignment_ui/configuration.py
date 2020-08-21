@@ -1,7 +1,7 @@
 import os
 
 from PyQt5.QtWidgets import QWidget, QGridLayout, QLabel, QLineEdit, QPushButton, QHBoxLayout, QGroupBox, QSizePolicy, \
-    QDoubleSpinBox
+    QDoubleSpinBox, QCheckBox
 from PyQt5.QtWidgets import QFileDialog, QSpinBox, QVBoxLayout
 from .model import Model, Variable
 from .utils import connect_input_and_button
@@ -69,6 +69,13 @@ class ConfigurationWidget(QWidget):
         n_io_workers_widget.setValue(model.n_io_workers.get())
         hlayout.addWidget(n_io_workers_widget)
         self.model.n_io_workers.bind_spin_box(n_io_workers_widget)
+        hlayout.addStretch(1)
+
+        hlayout = QHBoxLayout()
+        top_layout.addLayout(hlayout)
+        self.use_gpu_widget = QCheckBox("Use GPU")
+        hlayout.addWidget(self.use_gpu_widget)
+        self.model.use_gpu.bind_checkbox(self.use_gpu_widget)
         hlayout.addStretch(1)
 
         group_box = QGroupBox("Neuroglancer parameters")

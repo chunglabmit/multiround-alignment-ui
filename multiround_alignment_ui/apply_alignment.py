@@ -142,11 +142,16 @@ class ApplyAlignmentWidget(QWidget):
     def on_run_image_alignment(self, *args):
         interpolator = self.model.fit_nonrigid_transform_path[
         self.model.n_refinement_rounds.get() - 1].get()
+        xs = self.model.x_voxel_size.get()
+        ys = self.model.y_voxel_size.get()
+        zs = self.model.z_voxel_size.get()
         args = ["--interpolator", interpolator,
                 "--n-workers", self.model.n_workers.get(),
                 "--n-writers", self.model.n_io_workers.get(),
                 "--n-levels", self.model.n_levels.get(),
-                "--use-gpu"]
+                "--voxel-size", "%.3f,%.3f,%.3f"  % (xs, ys, zs)]
+        if self.model.use_gpu.get():
+            args.append("--use-gpu")
         for idx in range(self.model.n_alignment_channels.get()):
             src_path = self.model.alignment_input_paths[idx].get()
             dest_path = self.model.alignment_output_paths[idx].get()

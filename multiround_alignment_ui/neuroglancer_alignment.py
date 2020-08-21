@@ -23,6 +23,8 @@ class NeuroglancerAlignmentWidget(QWidget, OnActivateMixin):
     def __init__(self, model:Model):
         QWidget.__init__(self)
         self.model = model
+        self.model.output_path.register_callback("rough-alignment", self.on_output_change)
+
         layout = QVBoxLayout()
         self.setLayout(layout)
         self.model.output_path.register_callback("neuroglancer-alignment",
@@ -98,6 +100,16 @@ class NeuroglancerAlignmentWidget(QWidget, OnActivateMixin):
     def on_activated(self):
         self.update_controls()
 
+    def on_output_change(self, *args):
+        self.model.rough_interpolator.set(
+            os.path.join(self.model.output_path.get(),
+                         "rough-alignment.pkl")
+        )
+        self.model.rough_inverse_interpolator.set(
+            os.path.join(self.model.output_path.get(),
+                         "rough-inverse_alignment.pkl")
+        )
+
     def update_controls(self):
         if not self.launched:
             self.model.nuggt_reference_url.set("")
@@ -146,6 +158,8 @@ class NeuroglancerAlignmentWidget(QWidget, OnActivateMixin):
                 None,
                 self.model.nuggt_points_path.get(),
                 voxel_size, voxel_size)
+            self.viewer_pair.n_workers = self.model.n_workers.get()
+            self.viewer_pair.max_batch_size = 1
             real_save = self.viewer_pair.save_points
             #
             # Do some housekeeping associated with saving files
@@ -153,7 +167,6 @@ class NeuroglancerAlignmentWidget(QWidget, OnActivateMixin):
             # * enable the rough alignment button
             #
             def on_save(*args):
-                real_save()
                 with open(self.model.nuggt_points_path.get()) as fd:
                     coords = json.load(fd)
                 coords["reference"], coords["moving"] = [
@@ -190,11 +203,14 @@ class NeuroglancerAlignmentWidget(QWidget, OnActivateMixin):
                                format="blockfs")
         zs, ys, xs = fixed_ar.shape
         input = self.model.nuggt_rescaled_points_path.get()
+        #
+        # Yup, the sense is different here and we store fixed->moving as inverse.
+        #
         pickle_alignment([
             "--input",
             input,
             "--output",
-            self.model.rough_interpolator.get(),
+            self.model.rough_inverse_interpolator.get(),
             "--image-size",
             "%d,%d,%d" % (xs, ys, zs)
         ])
@@ -203,7 +219,7 @@ class NeuroglancerAlignmentWidget(QWidget, OnActivateMixin):
             "--input",
             input,
             "--output",
-            self.model.rough_inverse_interpolator.get(),
+            self.model.rough_interpolator.get(),
             "--invert",
             "--image-size",
             "%d,%d,%d" % (xs, ys, zs)

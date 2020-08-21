@@ -119,6 +119,7 @@ class Model:
     def __init__(self):
         self.__n_workers = Variable(os.cpu_count())
         self.__n_io_workers = Variable(min(os.cpu_count(), 12))
+        self.__use_gpu = Variable(True)
         #
         # Neuroglancer
         #
@@ -261,6 +262,7 @@ class Model:
         self.__serialization_dictionary = dict(
             n_workers=self.n_workers,
             n_io_workers=self.n_io_workers,
+            use_gpu=self.use_gpu,
             static_content_source=self.static_content_source,
             bind_address=self.bind_address,
             port_number=self.port_number,
@@ -375,6 +377,10 @@ class Model:
     @property
     def n_workers(self) -> Variable:
         return self.__n_workers
+
+    @property
+    def use_gpu(self) -> Variable:
+        return self.__use_gpu
 
     @property
     def n_io_workers(self) -> Variable:

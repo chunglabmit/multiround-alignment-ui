@@ -21,8 +21,6 @@ from .configuration import ConfigurationWidget
 from .fine_alignment import FineAlignmentWidget
 from .neuroglancer_alignment import  NeuroglancerAlignmentWidget
 from .preprocessing import PreprocessingWidget
-from .rigid_alignment import RigidAlignmentWidget
-from .rough_alignment import RoughAlignmentWidget
 from .apply_alignment import ApplyAlignmentWidget
 from .utils import setup_tqdm_progress, OnActivateMixin
 
@@ -61,8 +59,6 @@ class ApplicationWindow(QMainWindow):
                 ("Configuration", ConfigurationWidget),
                 ("Preprocessing", PreprocessingWidget),
                 ("Neuroglancer alignment", NeuroglancerAlignmentWidget),
-#                ("Rigid alignment", RigidAlignmentWidget),
-                ("Rough alignment", RoughAlignmentWidget),
                 ("Cell detection", CellDetectionWidget),
                 ("Fine alignment", FineAlignmentWidget),
                 ("Apply alignment", ApplyAlignmentWidget)

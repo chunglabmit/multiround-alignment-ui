@@ -9,7 +9,7 @@ import webbrowser
 
 import tqdm
 
-from eflash_2018.detect_blobs import main as detect_blobs_main
+from phathom.pipeline.detect_blobs import main as detect_blobs_main
 from eflash_2018.collect_patches import main as collect_patches_main
 from eflash_2018.train import ApplicationWindow as TrainWindow
 from mp_shared_memory import SharedMemory
@@ -21,7 +21,7 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout, QGroupBox, QHBoxLayout, \
 from .model import Model
 from .utils import tqdm_progress, create_neuroglancer_viewer, \
     wsgi_server, set_status_bar_message, \
-    clear_status_bar_message, OnActivateMixin
+    clear_status_bar_message, OnActivateMixin, fixed_neuroglancer_url, moving_neuroglancer_url
 
 
 class CellDetectionWidget(QWidget, OnActivateMixin):
@@ -200,11 +200,11 @@ class CellDetectionWidget(QWidget, OnActivateMixin):
         can_run_all = True
         do_bypass = self.model.bypass_training.get()
         for src_path, blob_path, widget, name, bypass in (
-                (self.model.fixed_preprocessed_path.get(),
+                (self.model.fixed_precomputed_path.get(),
                  self.model.fixed_blob_path.get(),
                  self.fixed_detect_blobs_button,
                  "fixed blob detection", False),
-                (self.model.moving_preprocessed_path.get(),
+                (self.model.moving_precomputed_path.get(),
                  self.model.moving_blob_path.get(),
                  self.moving_detect_blobs_button,
                  "moving blob detection", False),
@@ -253,24 +253,26 @@ class CellDetectionWidget(QWidget, OnActivateMixin):
         return input / self.model.z_voxel_size.get()
 
     def run_fixed_detect_blobs(self, *args):
-        source_glob = os.path.join(self.model.fixed_preprocessed_path.get(),
-                                   "*.tif*")
+        url = fixed_neuroglancer_url(self.model)
+        voxel_size = "%.3f,%.3f,%.3f" % (self.model.x_voxel_size.get(),
+                                         self.model.y_voxel_size.get(),
+                                         self.model.z_voxel_size.get())
         dog_low = self.model.fixed_low_sigma.get()
         dog_high = dog_low * 3
         min_distance = self.model.fixed_min_distance.get()
         with tqdm_progress():
             args = [
-                "--source", source_glob,
+                "--url", url,
                 "--output", self.model.fixed_blob_path.get(),
-                "--dog-low-xy", str(self.scale_xy(dog_low)),
-                "--dog-high-xy", str(self.scale_xy(dog_high)),
-                "--dog-low-z", str(self.scale_z(dog_low)),
-                "--dog-high-z", str(self.scale_z(dog_high)),
+                "--sigma-low", str(dog_low),
+                "--sigma-high", str(dog_high),
+                "--min-distance", str(min_distance),
                 "--threshold", str(self.model.fixed_blob_threshold.get()),
-                "--min-distance-xy", str(self.scale_xy(min_distance)),
-                "--min-distance-z", str(self.scale_z(min_distance)),
-                "--n-cpus", str(self.model.n_workers.get()),
-                "--n-io-cpus", str(self.model.n_io_workers.get())
+                "--voxel-size", voxel_size,
+                "--n-workers", str(self.model.n_workers.get()),
+                "--block-size-x", "128",
+                "--block-size-y", "128",
+                "--block-size-z", "128"
             ]
             detect_blobs_main(args)
         self.update_controls()
@@ -279,24 +281,26 @@ class CellDetectionWidget(QWidget, OnActivateMixin):
         set_status_bar_message("Found %d blobs in fixed volume" % n_blobs)
 
     def run_moving_detect_blobs(self, *args):
-        source_glob = os.path.join(self.model.moving_preprocessed_path.get(),
-                                   "*.tif*")
+        url = moving_neuroglancer_url(self.model)
+        voxel_size = "%.3f,%.3f,%.3f" % (self.model.x_voxel_size.get(),
+                                         self.model.y_voxel_size.get(),
+                                         self.model.z_voxel_size.get())
         dog_low = self.model.moving_low_sigma.get()
         dog_high = dog_low * 3
         min_distance = self.model.moving_min_distance.get()
         with tqdm_progress():
             args = [
-                "--source", source_glob,
+                "--url", url,
                 "--output", self.model.moving_blob_path.get(),
-                "--dog-low-xy", str(self.scale_xy(dog_low)),
-                "--dog-high-xy", str(self.scale_xy(dog_high)),
-                "--dog-low-z", str(self.scale_z(dog_low)),
-                "--dog-high-z", str(self.scale_z(dog_high)),
+                "--sigma-low", str(dog_low),
+                "--sigma-high", str(dog_high),
+                "--min-distance", str(min_distance),
                 "--threshold", str(self.model.moving_blob_threshold.get()),
-                "--min-distance-xy", str(self.scale_xy(min_distance)),
-                "--min-distance-z", str(self.scale_z(min_distance)),
-                "--n-cpus", str(self.model.n_workers.get()),
-                "--n-io-cpus", str(self.model.n_io_workers.get())
+                "--voxel-size", voxel_size,
+                "--n-workers", str(self.model.n_workers.get()),
+                "--block-size-x", "128",
+                "--block-size-y", "128",
+                "--block-size-z", "128"
             ]
             detect_blobs_main(args)
         self.update_controls()

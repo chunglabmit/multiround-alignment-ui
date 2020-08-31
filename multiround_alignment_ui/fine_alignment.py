@@ -340,6 +340,12 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
             self.find_neighbors_method_widget.currentText()
         )
         self.enable_find_neighbors_panels()
+        for path in self.find_neighbors_paths():
+            if not os.path.exists(path):
+                self.find_neighbors_button.setEnabled(False)
+                break
+        else:
+            self.find_neighbors_button.setEnabled(True)
 
     def enable_find_neighbors_panels(self):
         enable_points = (
@@ -360,13 +366,28 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
         else:
             return self.model.moving_coords_path.get()
 
+    def find_neighbors_paths(self):
+        idx = self.current_round_idx
+        fnm = self.model.find_neighbors_method[idx].get()
+        transform_path = self.model.rough_interpolator.get() if idx == 0 \
+            else self.model.fit_nonrigid_transform_inverse_path[idx-1].get()
+        fn_paths = [
+            self.fixed_coords_path(),
+            transform_path
+        ]
+        if fnm == FindNeighborsMethod.POINTS.value:
+            fn_paths += [
+                self.moving_coords_path(),
+                self.model.fixed_geometric_features_path.get(),
+                self.model.moving_geometric_features_path.get()
+            ]
+        return fn_paths
+
     def update_controls(self):
         self.enable_find_neighbors_panels()
         idx = self.current_round_idx
-        transform_path = self.model.rough_interpolator.get() if idx == 0 \
-            else self.model.fit_nonrigid_transform_inverse_path[idx-1].get()
-        self.find_neighbors_method_widget.setCurrentText(
-            self.model.find_neighbors_method[idx].get())
+        fnm = self.model.find_neighbors_method[idx].get()
+        self.find_neighbors_method_widget.setCurrentText(fnm)
         for src_paths, dest_paths, widget, name, re_name in (
                 (
                     [self.fixed_coords_path()],
@@ -396,13 +417,7 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
                     "Recalculate all geometric features"
                 ),
                 (
-                    [
-                        self.fixed_coords_path(),
-                        self.moving_coords_path(),
-                        self.model.fixed_geometric_features_path.get(),
-                        self.model.moving_geometric_features_path.get(),
-                        transform_path
-                    ],
+                    self.find_neighbors_paths(),
                     [
                         self.model.find_neighbors_path[idx].get(),
                         self.model.find_neighbors_pdf_path[idx].get()

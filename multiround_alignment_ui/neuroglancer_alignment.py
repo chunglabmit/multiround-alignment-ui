@@ -167,6 +167,7 @@ class NeuroglancerAlignmentWidget(QWidget, OnActivateMixin):
             # * enable the rough alignment button
             #
             def on_save(*args):
+                real_save()
                 with open(self.model.nuggt_points_path.get()) as fd:
                     coords = json.load(fd)
                 coords["reference"], coords["moving"] = [

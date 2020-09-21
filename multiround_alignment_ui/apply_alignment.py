@@ -175,8 +175,11 @@ class ApplyAlignmentWidget(QWidget):
                     set_status_bar_message(
                         "Skipping %s" % os.path.split(precomputed_dir)[-1])
                     continue
+                precomputed_path = os.path.join(precomputed_dir,
+                                                "1_1_1",
+                                                "precomputed.blockfs")
                 blockfs2tif([
-                    "--input", precomputed_dir,
+                    "--input", precomputed_path,
                     "--output-pattern", output_pattern,
                     "--n-workers", str(self.model.n_io_workers.get())])
 

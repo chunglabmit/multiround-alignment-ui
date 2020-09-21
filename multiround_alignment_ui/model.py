@@ -225,6 +225,15 @@ class Model:
         self.__find_corr_neighbors_min_correlation = [
             Variable(.9) for _ in range(5)
         ]
+        self.__find_corr_neighbors_x_grid = [
+            Variable(50) for _ in range(5)
+        ]
+        self.__find_corr_neighbors_y_grid = [
+            Variable(50) for _ in range(5)
+        ]
+        self.__find_corr_neighbors_z_grid = [
+            Variable(50) for _ in range(5)
+        ]
         self.__find_neighbors_path = [
             Variable("") for _ in range(5)
         ]
@@ -324,6 +333,9 @@ class Model:
             find_corr_neighbors_radius=self.find_corr_neighbors_radius,
             find_corr_neighbors_min_correlation=\
                 self.find_corr_neighbors_min_correlation,
+            find_corr_neighbors_x_grid=self.find_corr_neighbors_x_grid,
+            find_corr_neighbors_y_grid=self.find_corr_neighbors_y_grid,
+            find_corr_neighbors_z_grid=self.find_corr_neighbors_z_grid,
             find_neighbors_path=self.find_neighbors_path,
             find_neighbors_pdf_path=self.find_neighbors_pdf_path,
             filter_matches_path=self.filter_matches_path,
@@ -640,6 +652,18 @@ class Model:
     @property
     def find_corr_neighbors_min_correlation(self) -> typing.List[Variable]:
         return self.__find_corr_neighbors_min_correlation
+
+    @property
+    def find_corr_neighbors_x_grid(self) -> typing.List[Variable]:
+        return self.__find_corr_neighbors_x_grid
+
+    @property
+    def find_corr_neighbors_y_grid(self) -> typing.List[Variable]:
+        return self.__find_corr_neighbors_y_grid
+
+    @property
+    def find_corr_neighbors_z_grid(self) -> typing.List[Variable]:
+        return self.__find_corr_neighbors_z_grid
 
     @property
     def find_neighbors_path(self) -> typing.List[Variable]:

@@ -1,3 +1,4 @@
+import functools
 import os
 
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QGroupBox, QHBoxLayout, \
@@ -245,6 +246,37 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
         self.find_corr_neighbors_min_correlation_widget.valueChanged.connect(
             on_corr_neighbors_min_correlation_change
         )
+        hlayout.addStretch(1)
+        # find-corr-neighbors grid
+        fcng_groupbox = QGroupBox("Grid size")
+        playout.addWidget(fcng_groupbox)
+        hlayout = QHBoxLayout()
+        fcng_groupbox.setLayout(hlayout)
+        self.find_corr_neighbors_x_grid_widget, \
+            self.find_corr_neighbors_y_grid_widget, \
+            self.find_corr_neighbors_z_grid_widget = \
+            [QSpinBox() for _ in range(3)]
+
+        def on_corr_neighbors_grid_change(value, variable):
+            variable[self.current_round_idx].set(value)
+        for label, widget, variable in (
+                ("X:",
+                 self.find_corr_neighbors_x_grid_widget,
+                 self.model.find_corr_neighbors_x_grid),
+                ("Y:",
+                 self.find_corr_neighbors_y_grid_widget,
+                 self.model.find_corr_neighbors_y_grid),
+                ("Z:",
+                 self.find_corr_neighbors_z_grid_widget,
+                 self.model.find_corr_neighbors_z_grid)
+        ):
+            hlayout.addWidget(QLabel(label))
+            hlayout.addWidget(widget)
+            widget.setMinimum(1)
+            widget.setMaximum(100)
+            widget.valueChanged.connect(
+                functools.partial(on_corr_neighbors_grid_change,
+                                  variable=variable))
         hlayout.addStretch(1)
 
         # find-neighbors button
@@ -538,7 +570,10 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
                     "--radius", self.model.find_corr_neighbors_radius[idx].get(),
                     "--n-cores", self.model.n_workers.get(),
                     "--min-correlation",
-                    self.model.find_corr_neighbors_min_correlation[idx].get()
+                    self.model.find_corr_neighbors_min_correlation[idx].get(),
+                    "--x-grid", self.model.find_corr_neighbors_x_grid[idx].get(),
+                    "--y-grid", self.model.find_corr_neighbors_y_grid[idx].get(),
+                    "--z-grid", self.model.find_corr_neighbors_z_grid[idx].get()
                 )
             ])
         self.update_controls()
@@ -634,6 +669,9 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
             self.model.find_corr_neighbors_sigma,
             self.model.find_corr_neighbors_radius,
             self.model.find_corr_neighbors_min_correlation,
+            self.model.find_corr_neighbors_x_grid,
+            self.model.find_corr_neighbors_y_grid,
+            self.model.find_corr_neighbors_z_grid,
             self.model.filter_matches_min_coherence,
             self.model.filter_matches_max_distance
         ):
@@ -683,6 +721,12 @@ class FineAlignmentWidget(QWidget, OnActivateMixin):
              self.find_corr_neighbors_radius_widget),
             (self.model.find_corr_neighbors_min_correlation,
              self.find_corr_neighbors_min_correlation_widget),
+            (self.model.find_corr_neighbors_x_grid,
+             self.find_corr_neighbors_x_grid_widget),
+            (self.model.find_corr_neighbors_y_grid,
+             self.find_corr_neighbors_y_grid_widget),
+            (self.model.find_corr_neighbors_z_grid,
+             self.find_corr_neighbors_z_grid_widget),
             (self.model.filter_matches_max_distance,
              self.maximum_distance_widget),
             (self.model.filter_matches_min_coherence,
